@@ -1,0 +1,86 @@
+[
+  {
+    "id": "Q1",
+    "type": "文档内直接问题",
+    "question": "服务网关端口和内部 RPC 通信端口分别是多少？",
+    "expected_keywords": ["8501", "9090"],
+    "expected_section": "第一节：服务架构与基础端口配置",
+    "should_refuse": false
+  },
+  {
+    "id": "Q2",
+    "type": "文档内直接问题",
+    "question": "数据库的最大连接池容量和空闲连接回收超时时间分别是多少？",
+    "expected_keywords": ["120", "300"],
+    "expected_section": "第二节：数据库连接与连接池策略",
+    "should_refuse": false
+  },
+  {
+    "id": "Q3",
+    "type": "同义改写问题",
+    "question": "如果上传了一个纯图片扫描的 PDF 文档，系统会报哪个错误码？应该怎么处理？",
+    "expected_keywords": ["E3002", "OCR"],
+    "expected_section": "第五节：故障排查与错误码字典",
+    "should_refuse": false
+  },
+  {
+    "id": "Q4",
+    "type": "同义改写问题",
+    "question": "向量库加载时如果遇到特征维度不匹配（E2004），应该执行什么命令解决？",
+    "expected_keywords": ["E2004", "rebuild_index"],
+    "expected_section": "第五节：故障排查与错误码字典",
+    "should_refuse": false
+  },
+  {
+    "id": "Q5",
+    "type": "跨段落综合问题",
+    "question": "文档加载器支持哪些文件格式？默认切分大小和单文件体积上限是多少？",
+    "expected_keywords": [".pdf", "600", "50MB"],
+    "expected_section": "第三节：文档解析与分块策略",
+    "should_refuse": false
+  },
+  {
+    "id": "Q6",
+    "type": "多轮指代追问",
+    "question": "它的最大连接池容量配置是多少？",
+    "chat_history": [
+      {"role": "user", "content": "PostgreSQL 数据库的默认管理员账号是什么？"},
+      {"role": "assistant", "content": "数据库的默认管理员账号是 db_operator。"}
+    ],
+    "expected_keywords": ["120", "max_connections"],
+    "expected_section": "第二节：数据库连接与连接池策略",
+    "should_refuse": false
+  },
+  {
+    "id": "Q7",
+    "type": "机制解释问题",
+    "question": "本地 TF-IDF 检索的最低相关度阈值是多少？低于该阈值时系统会怎么做？",
+    "expected_keywords": ["0.08", "未提及"],
+    "expected_section": "第四节：向量索引与检索阈值说明",
+    "should_refuse": false
+  },
+  {
+    "id": "Q8",
+    "type": "运维配置问题",
+    "question": "系统自动备份在每天几点执行？备份归档保留多少天？",
+    "expected_keywords": ["02:00", "14"],
+    "expected_section": "第六节：备份与恢复流程",
+    "should_refuse": false
+  },
+  {
+    "id": "Q9",
+    "type": "文档外无关问题",
+    "question": "如何配置 Kubernetes Ingress 实现金丝雀灰度发布？",
+    "expected_keywords": [],
+    "expected_section": "无（文档外问题）",
+    "should_refuse": true
+  },
+  {
+    "id": "Q10",
+    "type": "文档外无关问题",
+    "question": "2026年世界杯足球赛的举办城市有哪些？",
+    "expected_keywords": [],
+    "expected_section": "无（文档外问题）",
+    "should_refuse": true
+  }
+]

@@ -14,7 +14,7 @@ if str(CURRENT_DIR) not in sys.path:
 
 import streamlit as st
 import config
-from src.models import get_chat_model, get_embedding_model
+from src.models import get_chat_model, get_embedding_model, mask_secret
 from src.document_loader import load_and_split_files
 from src.vector_store import SmartVectorStore
 from src.rag_engine import RAGEngine
@@ -240,20 +240,22 @@ with st.sidebar:
         max_value=1.0,
         value=config.DEFAULT_TEMPERATURE,
         step=0.05,
-        help="值越低回答越聚焦于文档事实，严禁幻觉"
+        help="值越低回答越聚焦于文档内容、随机性越小"
     )
 
     st.markdown("---")
 
     # 2. 向量检索配置
     st.markdown("**2. 向量检索模式**")
+    LOCAL_MODE_LABEL = "本地 TF-IDF 字符检索 (默认，无需 Embedding API)"
     embedding_mode = st.radio(
         "Embedding 向量方案",
-        options=["内置自适应向量检索 (推荐，零外部依赖/免额外模型消费)", "在线 Embedding API (OpenAI 兼容)"],
-        index=0
+        options=[LOCAL_MODE_LABEL, "在线 Embedding API (OpenAI 兼容)"],
+        index=0,
+        help="本地方案基于字符 n-gram 字面相似度，非深度语义向量；载入已保存知识库时需选择与建库时相同的方案"
     )
 
-    use_local = (embedding_mode == "内置自适应向量检索 (推荐，零外部依赖/免额外模型消费)")
+    use_local = (embedding_mode == LOCAL_MODE_LABEL)
     emb_api_key = api_key
     emb_base_url = base_url
     emb_model = config.DEFAULT_EMBEDDING_MODEL_NAME
@@ -287,6 +289,39 @@ with st.sidebar:
     st.markdown(f"- 索引文档数：**{len(st.session_state.processed_files)}** 篇")
     st.markdown(f"- 向量片段数：**{st.session_state.total_chunks}** 个")
 
+    # 本地持久化知识库热加载
+    has_saved_db = (config.VECTOR_DB_DIR / "docs.json").exists() and (config.VECTOR_DB_DIR / "vectors.npy").exists()
+    if has_saved_db and st.session_state.vector_store is None:
+        if st.button("🔄 载入已保存的本地知识库", use_container_width=True):
+            try:
+                emb_inst = get_embedding_model(
+                    api_key=emb_api_key,
+                    base_url=emb_base_url,
+                    model_name=emb_model,
+                    use_local_fallback=use_local
+                )
+                loaded_store = SmartVectorStore.load_local(config.VECTOR_DB_DIR, embedding_function=emb_inst)
+                st.session_state.vector_store = loaded_store
+                if api_key:
+                    llm_inst = get_chat_model(
+                        api_key=api_key,
+                        base_url=base_url,
+                        model_name=model_name,
+                        temperature=temperature,
+                        streaming=True
+                    )
+                    st.session_state.rag_engine = RAGEngine(
+                        llm=llm_inst,
+                        vector_store=loaded_store,
+                        top_k=top_k
+                    )
+                st.session_state.processed_files = list(set(d.metadata.get("source", "未知") for d in loaded_store.documents))
+                st.session_state.total_chunks = len(loaded_store.documents)
+                st.success(f"已恢复本地知识库（{len(st.session_state.processed_files)} 篇文档，{st.session_state.total_chunks} 个切片）！")
+                st.rerun()
+            except Exception as ex:
+                st.error(f"载入本地知识库失败: {ex}")
+
     if st.button("🗑️ 清空知识库与重置对话", use_container_width=True):
         st.session_state.chat_history = []
         st.session_state.vector_store = None
@@ -310,7 +345,7 @@ st.markdown("""
     </div>
     <div>
         <h1 class="brand-title">SmartDoc-RAG 智能文档知识库助手</h1>
-        <p class="brand-subtitle">基于 LangChain 核心框架构建，结合在线大模型实现精准的多源文档解析、语义向量检索与引用溯源问答</p>
+        <p class="brand-subtitle">基于 LangChain LCEL 与在线大模型，实现多格式文档解析、检索增强问答与来源溯源</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
@@ -343,26 +378,32 @@ with st.expander("📂 知识库文件管理与向量构建", expanded=(st.sessi
                     saved_paths.append(target_path)
 
                 # 解析与切分文档
-                split_docs = load_and_split_files(
+                split_docs, parse_report = load_and_split_files(
                     saved_paths,
                     chunk_size=chunk_size,
                     chunk_overlap=chunk_overlap
                 )
 
+                if parse_report["failed"]:
+                    for item in parse_report["failed"]:
+                        st.warning(f"⚠️ 文件「{item['file']}」未能解析成功: {item['reason']}")
+
                 if not split_docs:
                     st.error("未能从所选文档中提取出有效文本，请检查文档内容！")
                 else:
-                    # 初始化 Embedding 模型
-                    emb_model_instance = get_embedding_model(
-                        api_key=emb_api_key,
-                        base_url=emb_base_url,
-                        model_name=emb_model,
-                        use_local_fallback=use_local
-                    )
-
-                    # 构建并持久化向量库
-                    v_store = SmartVectorStore.from_documents(split_docs, emb_model_instance)
-                    v_store.save_local(config.VECTOR_DB_DIR)
+                    # 初始化 Embedding 模型并构建、持久化向量库
+                    try:
+                        emb_model_instance = get_embedding_model(
+                            api_key=emb_api_key,
+                            base_url=emb_base_url,
+                            model_name=emb_model,
+                            use_local_fallback=use_local
+                        )
+                        v_store = SmartVectorStore.from_documents(split_docs, emb_model_instance)
+                        v_store.save_local(config.VECTOR_DB_DIR)
+                    except Exception as ex:
+                        st.error(f"向量索引构建失败（未切换到其他向量化方式，请检查 Embedding 配置后重试）: {mask_secret(str(ex))}")
+                        st.stop()
 
                     # 初始化大模型与 RAG 引擎
                     llm_instance = get_chat_model(
@@ -379,12 +420,13 @@ with st.expander("📂 知识库文件管理与向量构建", expanded=(st.sessi
                     )
 
                     # 更新全局会话状态
+                    success_file_names = [f["file"] for f in parse_report["success"]]
                     st.session_state.vector_store = v_store
                     st.session_state.rag_engine = rag_engine
-                    st.session_state.processed_files = [f.name for f in uploaded_files]
+                    st.session_state.processed_files = success_file_names
                     st.session_state.total_chunks = len(split_docs)
 
-                    st.success(f"✅ 知识库构建成功！共解析 {len(uploaded_files)} 篇文档，切分为 {len(split_docs)} 个文本片段。")
+                    st.success(f"✅ 知识库构建成功！成功解析 {len(success_file_names)} 篇文档，切分为 {len(split_docs)} 个文本片段。")
 
 
 # ==============================================================================
@@ -419,7 +461,7 @@ for msg in st.session_state.chat_history:
                     <div class="citation-card">
                         <div class="citation-meta">
                             <span>📄 来源 {idx+1}：<code>{src_name}</code> (页码: {page})</span>
-                            <span class="score-badge">相似度: {score:.4f}</span>
+                            <span class="score-badge" title="余弦相似度（-1~1），反映切片与提问关键词的相关程度，非答案置信度">检索相关度: {score:.4f}</span>
                         </div>
                         <div class="citation-body">{doc.page_content}</div>
                     </div>
@@ -452,12 +494,16 @@ if user_input:
         st.session_state.rag_engine.llm = current_llm
         st.session_state.rag_engine.top_k = top_k
 
-        # 流式回答
+        # 流式回答（注入有限轮数历史上下文，支持上下文指代追问）
         with st.chat_message("assistant"):
             response_container = st.empty()
             with st.spinner("正在检索知识库语义片段并推理生成回答..."):
                 try:
-                    stream_generator, sources = st.session_state.rag_engine.stream_query(user_input)
+                    prior_history = st.session_state.chat_history[:-1]
+                    stream_generator, sources = st.session_state.rag_engine.stream_query(
+                        user_input,
+                        chat_history=prior_history
+                    )
                     full_response = ""
                     for chunk in stream_generator:
                         full_response += chunk
@@ -474,7 +520,7 @@ if user_input:
                                 <div class="citation-card">
                                     <div class="citation-meta">
                                         <span>📄 来源 {idx+1}：<code>{src_name}</code> (页码: {page})</span>
-                                        <span class="score-badge">相似度: {score:.4f}</span>
+                                        <span class="score-badge" title="余弦相似度（-1~1），反映切片与提问关键词的相关程度，非答案置信度">检索相关度: {score:.4f}</span>
                                     </div>
                                     <div class="citation-body">{doc.page_content}</div>
                                 </div>
@@ -488,4 +534,20 @@ if user_input:
                     })
 
                 except Exception as e:
-                    st.error(f"大模型响应失败: {str(e)}")
+                    safe_msg = mask_secret(str(e))
+                    err_name = type(e).__name__
+                    lower_msg = safe_msg.lower()
+                    if "authentication" in err_name.lower() or "401" in lower_msg or "invalid api key" in lower_msg:
+                        hint = "API Key 无效或已过期，请在侧边栏检查密钥。"
+                    elif "ratelimit" in err_name.lower() or "429" in lower_msg:
+                        hint = "请求过于频繁或额度不足（限流），请稍后重试或检查账户余额。"
+                    elif "timeout" in err_name.lower() or "timed out" in lower_msg:
+                        hint = "请求超时，请检查网络或稍后重试。"
+                    elif "connection" in err_name.lower():
+                        hint = "无法连接到模型服务，请检查 Base URL 与网络。"
+                    else:
+                        hint = "模型调用失败。"
+                    st.error(f"大模型响应失败：{hint}\n\n详细信息（已脱敏）: {err_name}: {safe_msg}")
+                    # 回滚本轮用户提问，避免无回答的问题进入后续多轮上下文
+                    if st.session_state.chat_history and st.session_state.chat_history[-1]["role"] == "user":
+                        st.session_state.chat_history.pop()
