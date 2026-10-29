@@ -1,0 +1,18 @@
+# LangChain 核心与生态组件
+langchain>=0.3.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+langchain-openai>=0.2.0
+
+# Web 可视化交互界面
+streamlit>=1.38.0
+
+# 文档解析与文本处理
+pypdf>=4.0.0
+python-docx>=1.1.0
+python-dotenv>=1.0.0
+tiktoken>=0.7.0
+
+# 向量计算支持
+numpy>=1.24.0
+scikit-learn>=1.3.0

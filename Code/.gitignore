@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environment variables
+.env
+
+# Streamlit
+.streamlit/
+
+# Local Vector Data & Uploads
+data/uploads/*
+data/vector_db/*
+!data/uploads/.gitkeep
+!data/vector_db/.gitkeep
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
