@@ -1,0 +1,11 @@
+{
+  "method": "GET",
+  "url": "https://api.deepseek.com/models",
+  "time": "2026-11-01T10:53:31.975659+08:00",
+  "status": 200,
+  "models": [
+    "deepseek-flash",
+    "deepseek-v4-pro"
+  ],
+  "seconds": 0.17
+}

@@ -15,7 +15,7 @@
 - **架构实现**：
   - 框架：LangChain (LCEL 架构)
   - 交互界面：Streamlit Web UI
-  - 向量存储：Chroma / FAISS
+  - 向量存储：当前实际实现为 NumPy 余弦检索与本地代际快照；早期 Chroma / FAISS 是规划，未采用。
   - 模型接入：在线大模型 API（标准 OpenAI 兼容接口，支持 DeepSeek、通义千问、OpenAI 等）
 - **交付目标**：
   - 智能应用完整源码
@@ -25,3 +25,9 @@
 ## 4. 工程管理原则
 - 遵循严谨的协作规范：`raw/` -> `docs/` -> 用户确认 -> `output/`。
 - 不修改原始资料，过程留痕，代码与文档严格符合开源工程标准。
+
+## 5. 当前稳定口径（2026-11-01）
+
+- 默认检索为本地 TF-IDF 字符 2–3 gram（最多 2048 特征），不是深度语义 Embedding；生成使用在线 OpenAI 兼容 API，无离线大模型。
+- 在线 Embedding 由用户显式选择，错误不静默降级；新知识库使用 JSON TF-IDF 状态，旧 pickle 索引需要重建。
+- 根 README 是完整项目说明入口。用户要求提交说明不带版本信息，当前提交用文件为 `output/SmartDoc-RAG智能应用说明.md` 及同名 Word；过程和验证证据在 `docs/`。此前 v2 保留，不覆盖用户文件。

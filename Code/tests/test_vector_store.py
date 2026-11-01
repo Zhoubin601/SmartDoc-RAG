@@ -75,12 +75,13 @@ def test_vector_store_save_and_load_persistence(tmp_path: Path):
     # 持久化到临时目录
     save_dir = tmp_path / "test_vector_db"
     store.save_local(save_dir)
+    snapshot = SmartVectorStore.snapshot_path(save_dir)
 
     # 验证生成的文件清单
-    assert (save_dir / "docs.json").exists()
-    assert (save_dir / "vectors.npy").exists()
-    assert (save_dir / "metadata.json").exists()
-    assert (save_dir / "tfidf_state.pkl").exists()
+    assert (snapshot / "docs.json").exists()
+    assert (snapshot / "vectors.npy").exists()
+    assert (snapshot / "metadata.json").exists()
+    assert (snapshot / "tfidf_state.json").exists()
 
     # 彻底销毁旧对象
     del store
@@ -118,7 +119,7 @@ def test_vector_store_corrupted_data_raises(tmp_path: Path):
 
     # 篡改 vectors.npy（改成 3 行，使之与 docs.json 的 2 篇文档不符）
     corrupted_vecs = np.zeros((3, store.vectors.shape[1]), dtype=np.float32)
-    np.save(save_dir / "vectors.npy", corrupted_vecs)
+    np.save(SmartVectorStore.snapshot_path(save_dir) / "vectors.npy", corrupted_vecs)
 
     with pytest.raises(ValueError, match="向量库完整性损坏|不匹配"):
         SmartVectorStore.load_local(save_dir)

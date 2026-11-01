@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 多格式文档解析与切分模块
-支持 PDF、DOCX、Markdown、TXT 格式文件的智能解析、异常捕获、文本清洗与语义分块
+支持 PDF、DOCX、Markdown、TXT 解析、异常反馈与递归字符分块
 """
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
@@ -110,6 +110,8 @@ def split_documents(
     """
     对文档集合进行智能递归字符切分
     """
+    if chunk_size <= 0 or chunk_overlap < 0 or chunk_overlap >= chunk_size:
+        raise ValueError("切片大小必须为正数，重叠跨度必须非负且小于切片大小。")
     if not documents:
         return []
 
@@ -124,7 +126,8 @@ def split_documents(
 def load_and_split_files(
     file_paths: List[Path],
     chunk_size: int = 600,
-    chunk_overlap: int = 100
+    chunk_overlap: int = 100,
+    source_names: Dict[str, str] = None,
 ) -> Tuple[List[Document], Dict[str, Any]]:
     """
     批量加载并切分所有文件，返回切分后的 Document 列表以及明细解析报告
@@ -136,18 +139,24 @@ def load_and_split_files(
     }
 
     for fp in file_paths:
+        fp = Path(fp)
+        source = (source_names or {}).get(fp.name, fp.name)
         try:
             docs = load_single_file(fp)
+            for doc in docs:
+                doc.metadata["source"] = source
+                if source_names is not None:
+                    doc.metadata["storage_id"] = fp.name
             all_raw_docs.extend(docs)
             total_chars = sum(len(d.page_content) for d in docs)
             report["success"].append({
-                "file": fp.name,
+                "file": source,
                 "pages": len(docs),
                 "chars": total_chars
             })
         except Exception as e:
             report["failed"].append({
-                "file": fp.name,
+                "file": source,
                 "reason": str(e)
             })
 

@@ -20,7 +20,7 @@ load_dotenv(dotenv_path=env_path)
 # ============================
 DEFAULT_OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 DEFAULT_OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1")
-DEFAULT_MODEL_NAME = os.getenv("MODEL_NAME", "deepseek-chat")
+DEFAULT_MODEL_NAME = os.getenv("MODEL_NAME", "deepseek-flash")
 DEFAULT_TEMPERATURE = float(os.getenv("TEMPERATURE", "0.3"))
 
 # ============================

@@ -1,0 +1,317 @@
+{
+  "started_at": "2026-11-01T10:55:00.946182+08:00",
+  "config": {
+    "base_url": "https://api.deepseek.com",
+    "model": "deepseek-flash",
+    "max_tokens": 256,
+    "temperature": 0,
+    "timeout_seconds": 45,
+    "max_retries": 0,
+    "embedding": "LocalTfidfEmbeddings",
+    "top_k": 3,
+    "thinking": "disabled"
+  },
+  "http_requests": [
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 200,
+      "headers_seconds": 0.1548,
+      "usage": {
+        "prompt_tokens": 11,
+        "completion_tokens": 8,
+        "total_tokens": 19,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 11
+      },
+      "response_model": "deepseek-flash",
+      "finish_reason": "stop"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 401,
+      "headers_seconds": 0.072
+    },
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 200,
+      "headers_seconds": 0.0913,
+      "usage": {
+        "prompt_tokens": 439,
+        "completion_tokens": 29,
+        "total_tokens": 468,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 439
+      },
+      "response_model": "deepseek-flash",
+      "finish_reason": "stop"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 200,
+      "headers_seconds": 0.1637,
+      "usage": {
+        "prompt_tokens": 480,
+        "completion_tokens": 41,
+        "total_tokens": 521,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 480
+      },
+      "response_model": "deepseek-flash",
+      "finish_reason": "stop"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 200,
+      "headers_seconds": 0.0993,
+      "usage": {
+        "prompt_tokens": 538,
+        "completion_tokens": 90,
+        "total_tokens": 628,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 538
+      },
+      "response_model": "deepseek-flash",
+      "finish_reason": "stop"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 200,
+      "headers_seconds": 0.0991,
+      "usage": {
+        "prompt_tokens": 649,
+        "completion_tokens": 56,
+        "total_tokens": 705,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 649
+      },
+      "response_model": "deepseek-flash",
+      "finish_reason": "stop"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 200,
+      "headers_seconds": 0.0936,
+      "usage": {
+        "prompt_tokens": 468,
+        "completion_tokens": 9,
+        "total_tokens": 477,
+        "prompt_tokens_details": {
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 468
+      },
+      "response_model": "deepseek-flash",
+      "finish_reason": "stop"
+    },
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "sse_done": false,
+      "status": 200,
+      "headers_seconds": 0.1045
+    }
+  ],
+  "cases": [
+    {
+      "name": "中文基础连通性",
+      "answer": "你好！有什么我可以帮你的吗？",
+      "usage": {
+        "input_tokens": 11,
+        "output_tokens": 8,
+        "total_tokens": 19,
+        "input_token_details": {
+          "cache_read": 0
+        },
+        "output_token_details": {}
+      },
+      "finish_reason": "stop",
+      "result": "PASS",
+      "seconds": 1.1425
+    },
+    {
+      "name": "无效凭据错误处理",
+      "error_type": "OpenAIAuthenticationError",
+      "status": 401,
+      "result": "PASS",
+      "seconds": 0.0747
+    },
+    {
+      "name": "技术文档直接事实",
+      "question": "岚桥试验站的文档网关监听端口是多少？",
+      "answer": "根据参考资料【参考片段 1】（来源：live_manual.md），岚桥试验站的文档网关监听端口为 **7219**。",
+      "chunks": 0,
+      "sources": [
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.36248767375946045,
+          "text": "# 岚桥试验站运行手册\n\n本文档仅供软件测试使用。站点、数值及规则均为虚构测试夹具，不是实际业务资料。\n\n## 岚桥站服务\n岚桥试验站的文档网关监听端口为 7219。网关请求超时时间为 37 秒，配置项为 gateway_timeout。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.10332061350345612,
+          "text": "## 岚桥站边界\n本手册未提供岚桥试验站的管理员姓名、采购预算或上线日期。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.05680478364229202,
+          "text": "## 岚桥站归档\n岚桥试验站的归档任务每天 03:17 执行，归档保留 17 天。归档失败错误码为 LQ-417，处理方式为检查归档目录写入权限并重新执行归档任务。"
+        }
+      ],
+      "result": "PASS",
+      "seconds": 0.68
+    },
+    {
+      "name": "多轮指代与流式输出",
+      "question": "它的请求超时时间是多少秒？",
+      "answer": "根据参考资料【参考片段 1】（来源：live_manual.md），岚桥试验站的网关请求超时时间为 **37 秒**，对应配置项为 `gateway_timeout`。",
+      "chunks": 1,
+      "sources": [
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.41138535737991333,
+          "text": "# 岚桥试验站运行手册\n\n本文档仅供软件测试使用。站点、数值及规则均为虚构测试夹具，不是实际业务资料。\n\n## 岚桥站服务\n岚桥试验站的文档网关监听端口为 7219。网关请求超时时间为 37 秒，配置项为 gateway_timeout。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.0852106362581253,
+          "text": "## 岚桥站边界\n本手册未提供岚桥试验站的管理员姓名、采购预算或上线日期。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.04684807360172272,
+          "text": "## 岚桥站归档\n岚桥试验站的归档任务每天 03:17 执行，归档保留 17 天。归档失败错误码为 LQ-417，处理方式为检查归档目录写入权限并重新执行归档任务。"
+        }
+      ],
+      "result": "FAIL",
+      "seconds": 0.7725
+    },
+    {
+      "name": "同义改写",
+      "question": "岚桥站每天什么时候做归档，旧归档多久清理？",
+      "answer": "根据参考资料【参考片段 1】（来源：live_manual.md）：\n\n- **归档执行时间**：每天 **03:17** 执行归档任务；\n- **归档保留时长**：归档保留 **17 天**（即旧归档在 17 天后清理）。\n\n此外，该片段还提到归档失败的错误码为 **LQ-417**，处理方式为检查归档目录写入权限并重新执行归档任务。",
+      "chunks": 0,
+      "sources": [
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.417069673538208,
+          "text": "## 岚桥站归档\n岚桥试验站的归档任务每天 03:17 执行，归档保留 17 天。归档失败错误码为 LQ-417，处理方式为检查归档目录写入权限并重新执行归档任务。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.07352927327156067,
+          "text": "## 岚桥站边界\n本手册未提供岚桥试验站的管理员姓名、采购预算或上线日期。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.047004908323287964,
+          "text": "# 岚桥试验站运行手册\n\n本文档仅供软件测试使用。站点、数值及规则均为虚构测试夹具，不是实际业务资料。\n\n## 岚桥站服务\n岚桥试验站的文档网关监听端口为 7219。网关请求超时时间为 37 秒，配置项为 gateway_timeout。"
+        }
+      ],
+      "result": "PASS",
+      "seconds": 1.1472
+    },
+    {
+      "name": "跨段落综合",
+      "question": "请同时给出岚桥试验站网关端口和归档失败错误码及处理方法。",
+      "answer": "根据参考资料【参考片段 1】（来源：live_manual.md）：\n\n- **文档网关监听端口**：7219\n- **归档失败错误码**：LQ-417\n- **处理方法**：检查归档目录写入权限，并重新执行归档任务。",
+      "chunks": 0,
+      "sources": [
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.3614988923072815,
+          "text": "## 岚桥站归档\n岚桥试验站的归档任务每天 03:17 执行，归档保留 17 天。归档失败错误码为 LQ-417，处理方式为检查归档目录写入权限并重新执行归档任务。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.12703971564769745,
+          "text": "# 岚桥试验站运行手册\n\n本文档仅供软件测试使用。站点、数值及规则均为虚构测试夹具，不是实际业务资料。\n\n## 岚桥站服务\n岚桥试验站的文档网关监听端口为 7219。网关请求超时时间为 37 秒，配置项为 gateway_timeout。"
+        },
+        {
+          "source": "live_manual.md",
+          "page": 1,
+          "score": 0.08420542627573013,
+          "text": "## 岚桥站边界\n本手册未提供岚桥试验站的管理员姓名、采购预算或上线日期。"
+        }
+      ],
+      "result": "PASS",
+      "seconds": 0.8076
+    },
+    {
+      "name": "文档外无关问题",
+      "question": "火星上有外星飞船吗？",
+      "answer": "提供的参考文档中未提及此信息。",
+      "chunks": 0,
+      "sources": [],
+      "result": "PASS",
+      "seconds": 0.8565
+    },
+    {
+      "name": "资料不存在信息拒答与真实 Streamlit 流式显示",
+      "question": "岚桥试验站的采购预算是多少？",
+      "answer": "提供的参考文档中未提及此信息。\n\n【参考片段 1】的「岚桥站边界」部分明确说明：本手册未提供岚桥试验站的管理员姓名、采购预算或上线日期。",
+      "assistant_rendered": true,
+      "sources": [
+        "live_manual.md"
+      ],
+      "result": "PASS",
+      "seconds": 3.4362
+    }
+  ],
+  "ingestion": {
+    "parse_report": {
+      "success": [
+        {
+          "file": "live_manual.md",
+          "pages": 1,
+          "chars": 242
+        }
+      ],
+      "failed": []
+    },
+    "chunks": 3,
+    "restored": 3
+  },
+  "finished_at": "2026-11-01T10:55:11.133644+08:00",
+  "request_count": 8
+}

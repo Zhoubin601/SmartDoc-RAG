@@ -89,3 +89,61 @@ def test_load_and_split_files_batch_report(tmp_path: Path):
     assert report["failed"][0]["file"] == "empty.txt"
     assert "0 字节" in report["failed"][0]["reason"]
     assert len(split_docs) >= 2
+
+
+def test_real_pdf_text_and_page_metadata(tmp_path):
+    from pypdf import PdfWriter
+    from pypdf.generic import DictionaryObject, NameObject, DecodedStreamObject
+    writer = PdfWriter()
+    for text in ["Port 7219", "Backup 17 days"]:
+        page = writer.add_blank_page(width=400, height=400)
+        font = DictionaryObject({NameObject("/Type"): NameObject("/Font"), NameObject("/Subtype"): NameObject("/Type1"), NameObject("/BaseFont"): NameObject("/Helvetica")})
+        page[NameObject("/Resources")] = DictionaryObject({NameObject("/Font"): DictionaryObject({NameObject("/F1"): font})})
+        stream = DecodedStreamObject()
+        stream.set_data(f"BT /F1 12 Tf 20 300 Td ({text}) Tj ET".encode())
+        page[NameObject("/Contents")] = writer._add_object(stream)
+    path = tmp_path / "manual.pdf"
+    writer.write(path)
+    docs = load_single_file(path)
+    assert len(docs) == 2
+    assert "7219" in docs[0].page_content and docs[1].metadata["page"] == 2
+
+
+@pytest.mark.parametrize("encrypted", [False, True])
+def test_blank_or_encrypted_pdf(tmp_path, encrypted):
+    from pypdf import PdfWriter
+    writer = PdfWriter()
+    writer.add_blank_page(width=300, height=300)
+    if encrypted:
+        writer.encrypt("password")
+    path = tmp_path / "empty.pdf"
+    writer.write(path)
+    with pytest.raises(ValueError, match="密码保护" if encrypted else "未提取到有效文本"):
+        load_single_file(path)
+
+
+def test_real_docx_paragraphs(tmp_path):
+    from docx import Document as WordDocument
+    doc = WordDocument()
+    doc.add_paragraph("端口为 7219。")
+    doc.add_paragraph("备份周期为 17 天。")
+    path = tmp_path / "manual.docx"
+    doc.save(path)
+    loaded = load_single_file(path)
+    assert len(loaded) == 1
+    assert "7219" in loaded[0].page_content and "17 天" in loaded[0].page_content
+    assert loaded[0].metadata["source"] == "manual.docx"
+
+
+@pytest.mark.parametrize("suffix", [".pdf", ".docx"])
+def test_corrupted_binary_file(tmp_path, suffix):
+    path = tmp_path / ("corrupt" + suffix)
+    path.write_bytes(b"invalid binary format")
+    with pytest.raises(ValueError, match="异常|损坏"):
+        load_single_file(path)
+
+
+@pytest.mark.parametrize("size,overlap", [(100,100), (100,101), (0,0), (100,-1)])
+def test_invalid_chunk_parameters(size, overlap):
+    with pytest.raises(ValueError, match="切片大小"):
+        split_documents([Document(page_content="测试文本")], size, overlap)

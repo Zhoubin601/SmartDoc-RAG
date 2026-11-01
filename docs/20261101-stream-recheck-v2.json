@@ -1,0 +1,48 @@
+{
+  "started_at": "2026-11-01T10:59:24.998921+08:00",
+  "purpose": "用户明确解除上限后，修正解压字节层的单次真实 SSE 与多轮 UI 复核",
+  "requests": [
+    {
+      "method": "POST",
+      "url": "https://api.deepseek.com/chat/completions",
+      "stream": true,
+      "max_output": 256,
+      "sse_done": true,
+      "status": 200,
+      "content_type": "text/event-stream; charset=utf-8",
+      "content_encoding": "zstd",
+      "sse_events": 45,
+      "response_model": "deepseek-flash",
+      "usage": {
+        "prompt_tokens": 480,
+        "completion_tokens": 43,
+        "total_tokens": 523,
+        "prompt_tokens_details": {
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 224
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "answer": "根据参考资料【参考片段 1】（来源：live_manual.md），岚桥试验站文档网关的请求超时时间为 **37 秒**，对应配置项为 `gateway_timeout`。",
+  "sources": [
+    {
+      "source": "live_manual.md",
+      "score": 0.41138535737991333
+    },
+    {
+      "source": "live_manual.md",
+      "score": 0.0852106362581253
+    },
+    {
+      "source": "live_manual.md",
+      "score": 0.04684807360172272
+    }
+  ],
+  "assistant_rendered": true,
+  "history_messages": 4,
+  "result": "PASS",
+  "seconds": 2.687
+}

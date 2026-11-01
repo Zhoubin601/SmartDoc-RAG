@@ -43,13 +43,12 @@ def test_get_embedding_model_local_fallback():
     emb = get_embedding_model(use_local_fallback=True)
     assert isinstance(emb, LocalTfidfEmbeddings)
 
-    # 未提供 API Key 自动降级为本地
-    emb_no_key = get_embedding_model(api_key=None)
-    assert isinstance(emb_no_key, LocalTfidfEmbeddings)
+    # 回归修复：在线模式缺少 Key 应报错，不能把自动降级当正确行为。
+    with pytest.raises(EmbeddingAPIError, match="需要 API Key"):
+        get_embedding_model(api_key=None)
 
-    # DeepSeek 官方端点（无 /embeddings 接口）自动切换为本地
-    emb_deepseek = get_embedding_model(api_key="sk-test", base_url="https://api.deepseek.com/v1")
-    assert isinstance(emb_deepseek, LocalTfidfEmbeddings)
+    with pytest.raises(EmbeddingAPIError, match="未提供独立 Embedding"):
+        get_embedding_model(api_key="sk-test", base_url="https://api.deepseek.com/v1")
 
 
 def test_safe_openai_embeddings_masks_credentials():
@@ -66,3 +65,15 @@ def test_safe_openai_embeddings_masks_credentials():
         safe_emb.embed_documents(["hello"])
     assert "sk-9999****2222" in str(exc_info.value)
     assert "sk-999988887777" not in str(exc_info.value)
+
+
+def test_chat_factory_limits_and_provider_options():
+    model = get_chat_model("dummy", "https://api.deepseek.com", streaming=True, timeout=12, max_tokens=256)
+    assert model.max_retries == 0
+    assert model.request_timeout == 12
+    assert model.extra_body == {"thinking": {"type": "disabled"}}
+
+
+def test_chat_factory_preserves_other_provider_options():
+    model = get_chat_model("dummy", "https://example.org/v1", model_name="other-model")
+    assert model.extra_body is None

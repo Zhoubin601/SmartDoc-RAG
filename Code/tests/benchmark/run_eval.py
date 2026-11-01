@@ -12,6 +12,7 @@ import os
 import sys
 import json
 import tempfile
+import argparse
 from pathlib import Path
 from datetime import datetime
 
@@ -29,13 +30,16 @@ from src.rag_engine import RAGEngine
 BENCHMARK_DIR = Path(__file__).resolve().parent
 MANUAL_PATH = BENCHMARK_DIR / "sample_manual.md"
 QUESTIONS_PATH = BENCHMARK_DIR / "eval_questions.json"
-REPORT_PATH = BENCHMARK_DIR / "BENCHMARK_REPORT.md"
-
-
-def run_benchmark():
-    api_key = os.getenv("OPENAI_API_KEY", "").strip()
+def run_benchmark(live=False, report_path=None):
+    # 环境存在 Key 也不自动消耗额度，必须显式 --live。
+    api_key = os.getenv("OPENAI_API_KEY", "").strip() if live else ""
+    if live and not api_key:
+        raise ValueError("真实评测需要 OPENAI_API_KEY。")
     base_url = os.getenv("OPENAI_BASE_URL", "https://api.deepseek.com/v1").strip()
-    model_name = os.getenv("MODEL_NAME", "deepseek-chat").strip()
+    model_name = os.getenv("MODEL_NAME", "deepseek-flash").strip()
+    report_path = Path(report_path) if report_path else CODE_DIR.parent / "docs" / (datetime.now().strftime("%Y%m%d-%H%M%S") + "-benchmark.md")
+    if report_path.exists():
+        raise FileExistsError("报告已存在，请使用新的输出路径。")
 
     # 1. 加载并切分手册
     split_docs, parse_report = load_and_split_files([MANUAL_PATH], chunk_size=260, chunk_overlap=40)
@@ -51,7 +55,7 @@ def run_benchmark():
 
     # 3. 初始化 LLM
     if api_key:
-        llm = get_chat_model(api_key=api_key, base_url=base_url, model_name=model_name, temperature=0.1, streaming=False)
+        llm = get_chat_model(api_key=api_key, base_url=base_url, model_name=model_name, temperature=0.1, streaming=False, max_tokens=512, max_retries=0)
         mode_desc = f"真实在线大模型 API (`{model_name}`)"
     else:
         from langchain_core.language_models.fake_chat_models import FakeListChatModel
@@ -93,7 +97,7 @@ def run_benchmark():
                 in_doc_hit_count += 1
         else:
             out_doc_total += 1
-            refused = ("未提及" in answer) or ("没有提及" in answer) or ("不足" in answer) or (top_score < 0.08)
+            refused = bool(api_key) and (("未提及" in answer) or ("没有提及" in answer) or ("不足" in answer))
             passed = refused
             if refused:
                 out_doc_refuse_count += 1
@@ -106,9 +110,9 @@ def run_benchmark():
             "top_score": f"{top_score:.4f}",
             "top_snippet": top_snippet,
             "answer": answer[:100] + ("..." if len(answer) > 100 else ""),
-            "passed": "PASS" if passed else "FAIL"
+            "passed": ("PASS" if passed else "FAIL") if api_key else "NOT TESTED（生成）"
         })
-        print(f"[{qid}] ({qtype}) TopScore={top_score:.4f} -> {'PASS' if passed else 'FAIL'}")
+        print(f"[{qid}] ({qtype}) TopScore={top_score:.4f} -> {records[-1]['passed']}")
 
     # 生成 Markdown 报告
     lines = [
@@ -123,7 +127,7 @@ def run_benchmark():
         "## 1. 统计摘要（测试集规模 N = 10）",
         "",
         f"- **文档内问题 Top-3 检索命中率（Hit@3）**：`{in_doc_hit_count} / {in_doc_total}`（在 8 道文档内测试题上达到 {in_doc_hit_count/in_doc_total*100:.1f}%）",
-        f"- **文档外无关问题合理拒答率**：`{out_doc_refuse_count} / {out_doc_total}`（在 2 道文档外测试题上达到 {out_doc_refuse_count/out_doc_total*100:.1f}%）",
+        (f"- **文档外问题模型拒答**：`{out_doc_refuse_count} / {out_doc_total}`" if api_key else "- **模型生成与拒答**：NOT TESTED（本次仅离线检索/提示词验证）。"),
         "- **局限性说明**：本评测基于 10 道结构化中文测试题与单篇技术手册样本，用于验证系统核心检索链路、指代消解与无资料拒答机制的正确性，不代表在任意大规模复杂语料上的普适准确率。字符级 TF-IDF 对字面词根重合敏感，若遇到完全不含共同词根的极端跨语言或深度抽象改写，需切换至在线稠密语义 Embedding 模式。",
         "",
         "## 2. 逐题评测明细表",
@@ -151,9 +155,14 @@ def run_benchmark():
         "阈值 `0.08` / `0.15` 依据上述样例分布选取；样例规模较小，更换语料后应重新运行本脚本校准。"
     ])
 
-    REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    print(f"\n评测报告已生成至: {REPORT_PATH}")
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"\n评测报告已生成至: {report_path}")
 
 
 if __name__ == "__main__":
-    run_benchmark()
+    parser = argparse.ArgumentParser(description="默认仅离线验证；--live 才会发出最多 10 次模型请求。")
+    parser.add_argument("--live", action="store_true")
+    parser.add_argument("--report", type=Path)
+    arguments = parser.parse_args()
+    run_benchmark(arguments.live, arguments.report)

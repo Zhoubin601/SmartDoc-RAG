@@ -1,5 +1,20 @@
 # 资料来源与摘录笔记
 
+## 2026-11-01 说明文档校对来源
+
+- 用户要求：检查 v2 是否有模板化或 AI 式表述，去除版本信息，核对内容正确性。已明确授权编辑，沿用原文档结构，不增加未经确认的功能说明。
+- 来源文件：`output/20261101-smartdoc-rag-README说明文档-v2.md` 与同名 Word；引用日期：2026-11-01。当前 Word 曾经用户保存，读取本次实际文件后复制编辑，不用早先缓存覆盖原件。
+- 核对依据：`Code/app.py`、`Code/config.py`、`Code/src/`，`docs/20261101-pytest-final.xml`、`docs/20261101-live-evidence.json`、`docs/20261101-stream-recheck-v2.json`，以及现存 `output/LIVE_API_TEST_REPORT.md`。不追加真实 API 调用，不把文档校对写成重新跑过全部测试。
+- 目录现状：旧版交付与修改报告存在用户删除，保持用户当前状态，不恢复、不删除其他交付。正文应移除缺失报告引用。
+
+## 2026-11-01 专项优化来源
+
+- 来源名称：用户专项任务附件；文件名：`C:/Users/a3185/Desktop/任务.txt`；引用日期：2026-11-01。用户随后明确要求执行。保留原架构，P0/P1 修复、测试、文档同步及真实 API 验证，首次真实模型与 Embedding 请求合计不超过 10 次。
+- 来源名称：当前本地仓库；文件名：`Code/`、根 README、`output/20261029-*`、既有 docs 与 memory-bank；引用日期：2026-11-01。代码是本轮行为判断依据，旧评测仅作历史记录。
+- 来源名称：原始课程截图；文件名：`raw/要求.png`；引用日期：2026-11-01。要求 LangChain 智能应用、README 与开源仓库链接；不修改原图。
+- 凭据仅从用户指定的本机文件读取到进程内存，不摘录、不复制进项目；该文件仅含密钥，未提供服务商网址。现有默认配置及既有联调记录指向 DeepSeek，本轮先核实官方文档后验证，若鉴权失败不尝试其他服务商。
+- 来源名称：DeepSeek 官方首次调用、Chat API、模型定价、限流和模型列表文档；链接：`https://api-docs.deepseek.com/`、`https://api-docs.deepseek.com/api/create-chat-completion/`、`https://api-docs.deepseek.com/quick_start/pricing/`、`https://api-docs.deepseek.com/quick_start/rate_limit/`、`https://api-docs.deepseek.com/api/list-models`；引用日期：2026-11-01。研究细节与实际验证分别记录，未实际调用的能力不能标为通过。
+
 ## 1. 资料文件清单
 
 | 文件名 | 类型 | 提取时间 | 来源状态 | 说明 |

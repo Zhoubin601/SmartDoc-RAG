@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 SmartDoc-RAG 智能文档知识库助手 - Streamlit Web 交互主程序
-UI/UX 规范遵循: ui-ux-pro-max (Minimalism & Swiss Style, Atkinson Hyperlegible, WCAG AA 4.5:1)
+Streamlit 交互界面与可折叠来源卡片
 """
-import os
 import sys
 from pathlib import Path
 
@@ -14,8 +13,9 @@ if str(CURRENT_DIR) not in sys.path:
 
 import streamlit as st
 import config
-from src.models import get_chat_model, get_embedding_model, mask_secret
-from src.document_loader import load_and_split_files
+from src.models import get_chat_model, get_embedding_model, mask_secret, embedding_label, embedding_identity
+from src.ui_helpers import citation_html
+from src.uploads import ingest_uploads
 from src.vector_store import SmartVectorStore
 from src.rag_engine import RAGEngine
 
@@ -231,7 +231,7 @@ with st.sidebar:
     model_name = st.text_input(
         "模型名称",
         value=config.DEFAULT_MODEL_NAME,
-        placeholder="deepseek-chat",
+        placeholder="deepseek-flash",
         help="指定调用的模型标识符"
     )
     temperature = st.slider(
@@ -240,7 +240,7 @@ with st.sidebar:
         max_value=1.0,
         value=config.DEFAULT_TEMPERATURE,
         step=0.05,
-        help="值越低回答越聚焦于文档内容、随机性越小"
+        help="部分模型会忽略 Temperature；回答仍需核对来源。"
     )
 
     st.markdown("---")
@@ -251,6 +251,7 @@ with st.sidebar:
     embedding_mode = st.radio(
         "Embedding 向量方案",
         options=[LOCAL_MODE_LABEL, "在线 Embedding API (OpenAI 兼容)"],
+        key="embedding_mode",
         index=0,
         help="本地方案基于字符 n-gram 字面相似度，非深度语义向量；载入已保存知识库时需选择与建库时相同的方案"
     )
@@ -268,7 +269,7 @@ with st.sidebar:
     st.markdown("---")
 
     # 3. 知识库切片参数
-    st.markdown("**3. 语义切片与检索参数**")
+    st.markdown("**3. 字符切片与检索参数**")
     col_c1, col_c2 = st.columns(2)
     with col_c1:
         chunk_size = st.number_input("切片大小 (字符)", min_value=200, max_value=2000, value=config.DEFAULT_CHUNK_SIZE, step=50)
@@ -290,7 +291,7 @@ with st.sidebar:
     st.markdown(f"- 向量片段数：**{st.session_state.total_chunks}** 个")
 
     # 本地持久化知识库热加载
-    has_saved_db = (config.VECTOR_DB_DIR / "docs.json").exists() and (config.VECTOR_DB_DIR / "vectors.npy").exists()
+    has_saved_db = SmartVectorStore.exists(config.VECTOR_DB_DIR)
     if has_saved_db and st.session_state.vector_store is None:
         if st.button("🔄 载入已保存的本地知识库", use_container_width=True):
             try:
@@ -301,26 +302,15 @@ with st.sidebar:
                     use_local_fallback=use_local
                 )
                 loaded_store = SmartVectorStore.load_local(config.VECTOR_DB_DIR, embedding_function=emb_inst)
+                # 完整恢复后才提交会话状态；问答时按当前配置初始化模型。
                 st.session_state.vector_store = loaded_store
-                if api_key:
-                    llm_inst = get_chat_model(
-                        api_key=api_key,
-                        base_url=base_url,
-                        model_name=model_name,
-                        temperature=temperature,
-                        streaming=True
-                    )
-                    st.session_state.rag_engine = RAGEngine(
-                        llm=llm_inst,
-                        vector_store=loaded_store,
-                        top_k=top_k
-                    )
-                st.session_state.processed_files = list(set(d.metadata.get("source", "未知") for d in loaded_store.documents))
+                st.session_state.rag_engine = RAGEngine(llm=None, vector_store=loaded_store, top_k=top_k)
+                st.session_state.processed_files = list({d.metadata.get("storage_id", d.metadata.get("source", "未知")) for d in loaded_store.documents})
                 st.session_state.total_chunks = len(loaded_store.documents)
                 st.success(f"已恢复本地知识库（{len(st.session_state.processed_files)} 篇文档，{st.session_state.total_chunks} 个切片）！")
                 st.rerun()
             except Exception as ex:
-                st.error(f"载入本地知识库失败: {ex}")
+                st.error(f"载入本地知识库失败: {mask_secret(str(ex), [api_key, emb_api_key])}")
 
     if st.button("🗑️ 清空知识库与重置对话", use_container_width=True):
         st.session_state.chat_history = []
@@ -357,7 +347,7 @@ st.markdown("""
 with st.expander("📂 知识库文件管理与向量构建", expanded=(st.session_state.vector_store is None)):
     uploaded_files = st.file_uploader(
         "支持批量上传 PDF、Word (.docx)、Markdown (.md)、TXT 格式文档",
-        type=["pdf", "docx", "md", "txt"],
+        type=["pdf", "docx", "md", "markdown", "txt"],
         accept_multiple_files=True
     )
 
@@ -369,20 +359,15 @@ with st.expander("📂 知识库文件管理与向量构建", expanded=(st.sessi
         elif not api_key:
             st.warning("请在左侧侧边栏填写大模型 API Key。")
         else:
-            with st.spinner("正在提取多源文档、进行语义切片与向量索引构建..."):
-                saved_paths = []
-                for uf in uploaded_files:
-                    target_path = config.UPLOAD_DIR / uf.name
-                    with open(target_path, "wb") as f:
-                        f.write(uf.getbuffer())
-                    saved_paths.append(target_path)
-
-                # 解析与切分文档
-                split_docs, parse_report = load_and_split_files(
-                    saved_paths,
-                    chunk_size=chunk_size,
-                    chunk_overlap=chunk_overlap
-                )
+            with st.spinner("正在提取多源文档、进行字符切片与向量索引构建..."):
+                try:
+                    split_docs, parse_report = ingest_uploads(
+                        uploaded_files, config.UPLOAD_DIR,
+                        chunk_size=chunk_size, chunk_overlap=chunk_overlap,
+                    )
+                except Exception as ex:
+                    st.error(mask_secret(str(ex), [api_key, emb_api_key]))
+                    st.stop()
 
                 if parse_report["failed"]:
                     for item in parse_report["failed"]:
@@ -400,24 +385,15 @@ with st.expander("📂 知识库文件管理与向量构建", expanded=(st.sessi
                             use_local_fallback=use_local
                         )
                         v_store = SmartVectorStore.from_documents(split_docs, emb_model_instance)
+                        llm_instance = get_chat_model(
+                            api_key=api_key, base_url=base_url, model_name=model_name,
+                            temperature=temperature, streaming=True,
+                        )
+                        rag_engine = RAGEngine(llm=llm_instance, vector_store=v_store, top_k=top_k)
                         v_store.save_local(config.VECTOR_DB_DIR)
                     except Exception as ex:
-                        st.error(f"向量索引构建失败（未切换到其他向量化方式，请检查 Embedding 配置后重试）: {mask_secret(str(ex))}")
+                        st.error(f"知识库构建失败（保留已有知识库，未切换模式）: {mask_secret(str(ex), [api_key, emb_api_key])}")
                         st.stop()
-
-                    # 初始化大模型与 RAG 引擎
-                    llm_instance = get_chat_model(
-                        api_key=api_key,
-                        base_url=base_url,
-                        model_name=model_name,
-                        temperature=temperature,
-                        streaming=True
-                    )
-                    rag_engine = RAGEngine(
-                        llm=llm_instance,
-                        vector_store=v_store,
-                        top_k=top_k
-                    )
 
                     # 更新全局会话状态
                     success_file_names = [f["file"] for f in parse_report["success"]]
@@ -428,6 +404,17 @@ with st.expander("📂 知识库文件管理与向量构建", expanded=(st.sessi
 
                     st.success(f"✅ 知识库构建成功！成功解析 {len(success_file_names)} 篇文档，切分为 {len(split_docs)} 个文本片段。")
 
+
+if st.session_state.vector_store is not None:
+    actual_embedding = st.session_state.vector_store.embedding_function
+    st.sidebar.info("当前知识库实际使用：" + embedding_label(actual_embedding))
+    actual_local = embedding_identity(actual_embedding)["type"] == "LocalTfidfEmbeddings"
+    if actual_local != use_local:
+        st.sidebar.warning("所选模式与当前知识库不同；当前问答沿用已建库的模式，重新构建成功后才会切换。")
+    elif not actual_local:
+        actual = embedding_identity(actual_embedding)
+        if actual.get("model") != emb_model or actual.get("base_url") != emb_base_url.rstrip("/"):
+            st.sidebar.warning("Embedding 配置已修改；当前知识库仍使用建库时的模型与端点，重新构建后才会生效。")
 
 # ==============================================================================
 # 智能对话与实时检索问答模块
@@ -455,17 +442,7 @@ for msg in st.session_state.chat_history:
         if "sources" in msg and msg["sources"]:
             with st.expander(f"📑 命中参考依据 ({len(msg['sources'])} 处来源片段)"):
                 for idx, (doc, score) in enumerate(msg["sources"]):
-                    src_name = doc.metadata.get("source", "未知来源")
-                    page = doc.metadata.get("page", 1)
-                    st.markdown(f"""
-                    <div class="citation-card">
-                        <div class="citation-meta">
-                            <span>📄 来源 {idx+1}：<code>{src_name}</code> (页码: {page})</span>
-                            <span class="score-badge" title="余弦相似度（-1~1），反映切片与提问关键词的相关程度，非答案置信度">检索相关度: {score:.4f}</span>
-                        </div>
-                        <div class="citation-body">{doc.page_content}</div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    st.markdown(citation_html(doc, score, idx), unsafe_allow_html=True)
 
 # 处理用户提问输入
 user_input = st.chat_input("针对已上传文档提问（例如：系统设计的核心原则是什么？）...")
@@ -483,22 +460,17 @@ if user_input:
         with st.chat_message("user"):
             st.markdown(user_input)
 
-        # 动态同步左侧调节的参数
-        current_llm = get_chat_model(
-            api_key=api_key,
-            base_url=base_url,
-            model_name=model_name,
-            temperature=temperature,
-            streaming=True
-        )
-        st.session_state.rag_engine.llm = current_llm
-        st.session_state.rag_engine.top_k = top_k
-
         # 流式回答（注入有限轮数历史上下文，支持上下文指代追问）
         with st.chat_message("assistant"):
             response_container = st.empty()
-            with st.spinner("正在检索知识库语义片段并推理生成回答..."):
+            with st.spinner("正在检索知识库相关片段并推理生成回答..."):
                 try:
+                    current_llm = get_chat_model(
+                        api_key=api_key, base_url=base_url, model_name=model_name,
+                        temperature=temperature, streaming=True,
+                    )
+                    st.session_state.rag_engine.llm = current_llm
+                    st.session_state.rag_engine.top_k = top_k
                     prior_history = st.session_state.chat_history[:-1]
                     stream_generator, sources = st.session_state.rag_engine.stream_query(
                         user_input,
@@ -514,17 +486,7 @@ if user_input:
                     if sources:
                         with st.expander(f"📑 命中参考依据 ({len(sources)} 处来源片段)"):
                             for idx, (doc, score) in enumerate(sources):
-                                src_name = doc.metadata.get("source", "未知来源")
-                                page = doc.metadata.get("page", 1)
-                                st.markdown(f"""
-                                <div class="citation-card">
-                                    <div class="citation-meta">
-                                        <span>📄 来源 {idx+1}：<code>{src_name}</code> (页码: {page})</span>
-                                        <span class="score-badge" title="余弦相似度（-1~1），反映切片与提问关键词的相关程度，非答案置信度">检索相关度: {score:.4f}</span>
-                                    </div>
-                                    <div class="citation-body">{doc.page_content}</div>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                st.markdown(citation_html(doc, score, idx), unsafe_allow_html=True)
 
                     # 记录至对话历史
                     st.session_state.chat_history.append({
@@ -534,7 +496,7 @@ if user_input:
                     })
 
                 except Exception as e:
-                    safe_msg = mask_secret(str(e))
+                    safe_msg = mask_secret(str(e), [api_key, emb_api_key])
                     err_name = type(e).__name__
                     lower_msg = safe_msg.lower()
                     if "authentication" in err_name.lower() or "401" in lower_msg or "invalid api key" in lower_msg:

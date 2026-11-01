@@ -1,5 +1,7 @@
 # Design System Master File
 
+> 2026-11-01 校准：本文是设计参考，不是无障碍认证或性能测试报告。当前应用未完成 WCAG AA 合规评估，不能据此宣称符合该标准；功能与运行说明以仓库根 README 为准。
+
 > **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
 > If that file exists, its rules **override** this Master file.
 > If not, strictly follow the rules below.
