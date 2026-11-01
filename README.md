@@ -8,7 +8,7 @@
 
 ## 安装与启动
 
-先安装 Python，再创建虚拟环境并安装依赖。以下命令适用于 Windows PowerShell。
+运行环境要求 **Python 3.10+**（已保存的测试记录在 Windows、Python 3.13.5 环境执行）。先创建虚拟环境并安装依赖，以下命令适用于 Windows PowerShell。
 
 ```powershell
 git clone https://github.com/Zhoubin601/SmartDoc-RAG.git
@@ -41,7 +41,21 @@ CHUNK_OVERLAP=100
 TOP_K=4
 ```
 
-配置示例使用 `deepseek-flash`，实际调用记录见[真实 API 测试报告](output/LIVE_API_TEST_REPORT.md)。模型工厂对 DeepSeek 官方接口的 `deepseek-flash` 和 `deepseek-v4-pro` 默认关闭 thinking，代码调用时可通过 `extra_body` 覆盖；其他服务不注入该参数。部分模型会忽略 Temperature，具体配置应以所用服务的[官方文档](https://api-docs.deepseek.com/)为准。
+配置示例使用 `deepseek-flash`，`OPENAI_BASE_URL` 填写 `https://api.deepseek.com` 或 `.env.example` 默认的 `https://api.deepseek.com/v1` 均可正常调用 DeepSeek 官方兼容接口；实际调用记录见[真实 API 测试报告](output/LIVE_API_TEST_REPORT.md)。模型工厂对 DeepSeek 官方接口的 `deepseek-flash` 和 `deepseek-v4-pro` 默认关闭 thinking，代码调用时可通过 `extra_body` 覆盖；其他服务不注入该参数。部分模型会忽略 Temperature，具体配置应以所用服务的[官方文档](https://api-docs.deepseek.com/)为准。
+
+## 核心功能与模块实现
+
+| 功能模块 | 当前代码实现 |
+|---|---|
+| 多格式文档上传 | 支持 PDF、DOCX、Markdown（`.md`/`.markdown`）、TXT 批量上传；使用 UUID 内部文件名排他保存，保留原始文件名用于展示与溯源，拒绝路径穿越、控制字符、不支持的扩展名与 0 字节空文件 |
+| 文档解析与切分 | `pypdf` 提取 PDF 文字层并记录页码，`python-docx` 提取 DOCX 正文段落，多编码读取 TXT/Markdown；逐文件报告解析结果，通过 `RecursiveCharacterTextSplitter` 递归字符切分（默认 `chunk_size=600`、`chunk_overlap=100`） |
+| 向量检索与 Top-K | `SmartVectorStore` 基于 NumPy 归一化向量点积计算余弦相似度并返回 Top-K（默认 `top_k=4`）；支持默认本地 TF-IDF 字符 2–3 gram 检索与可选在线 Embedding 检索 |
+| RAG 问答与流式输出 | 基于 LangChain LCEL（`ChatPromptTemplate \| ChatOpenAI \| StrOutputParser`）构建问答链，调用在线大模型支持同步问答与 SSE 流式打字机输出 |
+| 多轮对话指代 | `convert_chat_history` 保留最近 6 条有效 `user`/`assistant` 消息传入提示词，并在代词追问时融合上一轮用户提问执行检索 |
+| 来源引用与转义 | 折叠面板展示实际传入模型上下文的参考片段、文件名、页码与检索相关度分数；所有外部字段经 `html.escape` 转义后渲染 |
+| 无相关资料拒答 | 两级相关性守卫：最高分 `< 0.08` 时不传入低相关片段，直接注入无相关资料拒答提示且不显示未采用来源；`0.08 <= 最高分 < 0.15` 时注入低相关度甄别预警 |
+| 知识库保存与恢复 | 快照保存 JSON 文档、NumPy 矩阵、模型身份元数据与 JSON TF-IDF 状态，`CURRENT` 指针原子切换；支持启动后按原配置恢复及 `add_documents()` 增量添加 |
+| API 异常处理 | 捕获 401 鉴权失败、429 限流、超时与连接异常并分类提示；`mask_secret` 脱敏 API Key 与 Bearer 凭据，建库失败保留原知识库，流式异常自动回滚未完成提问 |
 
 ## 使用方法
 
@@ -99,6 +113,8 @@ Code/
   config.py              环境配置
   requirements.txt       运行及测试依赖
   .env.example           不含真实密钥的配置示例
+  README.md              Code 目录快速运行说明
+  LICENSE                MIT 许可证副本
   src/
     document_loader.py   多格式解析与字符切分
     uploads.py           安全保存与来源名称映射
@@ -113,6 +129,9 @@ raw/                     原始课程资料，只读保留
 docs/                    分析、测试与验证记录
 output/                  课程说明文档与 API 测试报告
 memory-bank/             长期背景
+design-system/           界面样式设计参考说明
+LICENSE                  仓库根目录 MIT 许可证
+README.md                项目技术说明主文档
 ```
 
 ## 测试和真实 API 验证

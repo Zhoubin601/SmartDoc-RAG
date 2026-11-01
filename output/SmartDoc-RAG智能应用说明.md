@@ -2,13 +2,13 @@
 
 SmartDoc-RAG 用于对上传的文档进行检索和问答。应用采用 LangChain LCEL 和 Streamlit，先从文档中找出相关片段，再调用在线大语言模型生成回答，并显示对应来源。默认检索方式为本地 TF-IDF，回答生成需要在线模型服务。
 
-课程 开源软件构建技术 第七章 智能应用开发
+课程：开源软件构建技术 第七章 智能应用开发
 
-开源仓库：[Zhoubin601/SmartDoc-RAG](https://github.com/Zhoubin601/SmartDoc-RAG)
+开源仓库：[https://github.com/Zhoubin601/SmartDoc-RAG](https://github.com/Zhoubin601/SmartDoc-RAG)
 
-开源许可 MIT
+开源许可：MIT
 
-项目说明：[仓库 README](../README.md)
+项目说明：[仓库根 README.md](../README.md)
 
 ## 功能与实现
 
@@ -28,7 +28,7 @@ SmartDoc-RAG 用于对上传的文档进行检索和问答。应用采用 LangCh
 
 ## 安装配置与使用
 
-先安装 Python，再在仓库的 Code 目录安装依赖并启动应用。以下命令适用于 Windows PowerShell。
+运行环境要求 Python 3.10+（测试环境为 Windows、Python 3.13.5）。先安装 Python，再在仓库的 Code 目录安装依赖并启动应用。以下命令适用于 Windows PowerShell。
 
 ```powershell
 python -m venv .venv
@@ -69,7 +69,7 @@ python tests/benchmark/run_live_api.py --live --evidence ../docs/live-new.json
 
 保存的 DeepSeek Flash 实际调用记录覆盖中文问答、文档事实、同义改写、跨段落问题、多轮指代，以及无关和缺失信息的拒答。在一次流式请求中记录到 45 个 SSE 事件及 [DONE] 结束标记，页面完整显示回答并保留来源。界面流程由 Streamlit AppTest 验证，没有人工浏览器验收记录。
 
-自动化测试结果见[执行记录](../docs/20261101-pytest-final.xml)；真实接口的请求、结果和已知限制见 [API 测试报告](LIVE_API_TEST_REPORT.md)。
+自动化测试结果见[执行记录（docs/20261101-pytest-final.xml）](../docs/20261101-pytest-final.xml)；真实接口的请求、结果和已知限制见 [API 测试报告（output/LIVE_API_TEST_REPORT.md）](LIVE_API_TEST_REPORT.md)。
 
 ## 使用限制
 

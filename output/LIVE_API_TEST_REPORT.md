@@ -1,24 +1,24 @@
 # SmartDoc-RAG 真实 API 测试报告
 
-执行日期：2026-11-01（Asia/Shanghai）。本报告区分真实调用、Mock 和未测试能力，不使用历史通过记录替代本轮证据。
+执行日期：2026-11-01（Asia/Shanghai）。本报告区分真实调用、Mock 和未测试能力，不使用历史通过记录替代实测证据。
 
 ## API 调研与配置
 
-| 项目 | 本轮核实结果 |
+| 项目 | 核实与实测结果 |
 |---|---|
 | 服务商 | DeepSeek；用户凭据文件仅含 Key，依据既有默认配置和历史来源选择该官方服务，并经真实鉴权确认 |
 | 官方文档 | https://api-docs.deepseek.com/ |
 | Base URL | https://api.deepseek.com（应用配置示例沿用兼容路径 /v1） |
 | 请求/鉴权 | POST /chat/completions；Authorization: Bearer；JSON messages、model、stream；返回 choices/message 或 SSE delta |
 | 实际模型 | deepseek-flash；GET /models 实际返回 deepseek-flash、deepseek-v4-pro |
-| 选择理由 | 官方较低成本模型，OpenAI 兼容；本轮实际中文 RAG 与流式验证可用，不作未经对比的速度优胜判断 |
+| 选择理由 | 官方较低成本模型，OpenAI 兼容；实际中文 RAG 与流式验证可用，不作未经对比的速度优胜判断 |
 | 流式 | 支持 SSE；末尾 data: [DONE]；最终复核 finish_reason=stop |
-| Embedding | 官方 API 文档未提供独立 Embedding 端点，本轮不猜测或尝试调用；本地 TF-IDF |
+| Embedding | 官方 API 文档未提供独立 Embedding 端点，不猜测或尝试调用；本地 TF-IDF |
 | 成本控制 | 输出最多256 Token，45秒超时，自动重试0，thinking=disabled，Top-K=3；无充值、购买或压力测试 |
 
 配置使用 OPENAI_API_KEY、OPENAI_BASE_URL、MODEL_NAME；密钥仅从用户指定文件读入进程内存，不复制进仓库。可选在线 Embedding 独立配置 EMBEDDING_API_KEY、EMBEDDING_BASE_URL、EMBEDDING_MODEL_NAME。
 
-官方定价页面在引用日期列出 Flash 每百万 Token 输入缓存命中 $0.003–0.006、输入未命中 $0.15–0.30、输出 $0.60–1.20（取决于时段）；未据此假定账户有免费额度。限流文档列出 Flash 账户并发上限2500、超过返回429。本轮串行小样本没有测试限流上限，具体账户额度/账单未查询。
+官方定价页面在引用日期列出 Flash 每百万 Token 输入缓存命中 $0.003–0.006、输入未命中 $0.15–0.30、输出 $0.60–1.20（取决于时段）；未据此假定账户有免费额度。限流文档列出 Flash 账户并发上限2500、超过返回429。串行小样本没有测试限流上限，具体账户额度/账单未查询。
 
 来源名称：DeepSeek 官方首次调用、Chat API、模型/价格、限流、思考模式及模型列表。
 链接：https://api-docs.deepseek.com/ 、https://api-docs.deepseek.com/api/create-chat-completion/ 、https://api-docs.deepseek.com/quick_start/pricing/ 、https://api-docs.deepseek.com/quick_start/rate_limit/ 、https://api-docs.deepseek.com/guides/thinking_mode/ 、https://api-docs.deepseek.com/api/list-models 。引用日期：2026-11-01。
